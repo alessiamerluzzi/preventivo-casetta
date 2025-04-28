@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preventivo Casa Vacanze</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        input, select {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 18px;
+            display: none;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .price-breakdown {
+            margin-top: 15px;
+            padding: 15px;
+            background-color: #e8f4fd;
+            border-radius: 4px;
+        }
+        .price-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        .price-total {
+            font-weight: bold;
+            border-top: 1px solid #bbd8f1;
+            padding-top: 8px;
+            margin-top: 8px;
+        }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        .calendar-header {
+            text-align: center;
+            font-weight: bold;
+            padding: 5px;
+            background-color: #f0f0f0;
+        }
+        .calendar-day {
+            padding: 10px 5px;
+            text-align: center;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: white;
+            cursor: pointer;
+            position: relative;
+        }
+        .calendar-day:hover {
+            background-color: #f0f0f0;
+        }
+        .calendar-day.selected {
+            background-color: #3498db;
+            color: white;
+        }
+        .calendar-day.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        .calendar-day .price {
+            font-size: 10px;
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            color: #666;
+        }
+        .selected .price {
+            color: #e0e0e0;
+        }
+        .form-row {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Preventivo Casa Vacanze</h1>
+        
+        <div class="form-row">
+            <label for="month-select">Seleziona mese:</label>
+            <select id="month-select">
+                <option value="4">Maggio 2025</option>
+                <option value="5">Giugno 2025</option>
+                <option value="6">Luglio 2025</option>
+                <option value="7">Agosto 2025</option>
+                <option value="8">Settembre 2025</option>
+                <option value="9">Ottobre 2025</option>
+            </select>
+        </div>
+
+        <div id="calendar-container">
+            <div class="calendar" id="calendar"></div>
+        </div>
+        
+        <div class="form-row">
+            <label>Date selezionate: <span id="selected-dates">Nessuna data selezionata</span></label>
+        </div>
+        
+        <div class="form-row">
+            <label>Notti: <span id="nights-count">0</span></label>
+        </div>
+        
+        <button id="calculate-btn" disabled>Calcola Preventivo</button>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Definizione delle tariffe
+            const rates = [
+                { start: new Date(2025, 4, 1), end: new Date(2025, 4, 16), price: 140 }, // 1-16 maggio
+                { start: new Date(2025, 4, 17), end: new Date(2025, 4, 31), price: 150 }, // 17-31 maggio
+                { start: new Date(2025, 5, 1), end: new Date(2025, 5, 15), price: 155 },  // 1-15 giugno
+                { start: new Date(2025, 5, 16), end: new Date(2025, 5, 30), price: 160 }, // 16-30 giugno
+                { start: new Date(2025, 6, 1), end: new Date(2025, 6, 15), price: 170 },  // 1-15 luglio
+                { start: new Date(2025, 6, 16), end: new Date(2025, 6, 31), price: 175 }, // 16-31 luglio
+                { start: new Date(2025, 7, 1), end: new Date(2025, 7, 8), price: 180 },   // 1-8 agosto
+                { start: new Date(2025, 7, 9), end: new Date(2025, 7, 23), price: 185 },  // 9-23 agosto
+                { start: new Date(2025, 7, 24), end: new Date(2025, 7, 31), price: 170 }, // 24-31 agosto
+                { start: new Date(2025, 8, 1), end: new Date(2025, 8, 15), price: 155 },  // 1-15 settembre
+                { start: new Date(2025, 8, 16), end: new Date(2025, 8, 30), price: 150 }, // 16-30 settembre
+                { start: new Date(2025, 9, 1), end: new Date(2025, 9, 31), price: 130 }   // 1-31 ottobre
+            ];
+
+            const cleaningFee = 60;
+            const minNights = 4;
+            
+            let selectedDates = [];
+            const calendarElement = document.getElementById('calendar');
+            const monthSelect = document.getElementById('month-select');
+            const selectedDatesElement = document.getElementById('selected-dates');
+            const nightsCountElement = document.getElementById('nights-count');
+            const calculateButton = document.getElementById('calculate-btn');
+            const resultElement = document.getElementById('result');
+            
+            // Genera i nomi dei giorni della settimana
+            const weekdays = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+            weekdays.forEach(day => {
+                const dayElement = document.createElement('div');
+                dayElement.className = 'calendar-header';
+                dayElement.textContent = day;
+                calendarElement.appendChild(dayElement);
+            });
+            
+            // Funzione per verificare se una data è prenotabile
+            function isBookableDate(date) {
+                for (const rate of rates) {
+                    if (date >= rate.start && date <= rate.end) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+            
+            // Funzione per ottenere il prezzo di una data
+            function getDatePrice(date) {
+                for (const rate of rates) {
+                    if (date >= rate.start && date <= rate.end) {
+                        return rate.price;
+                    }
+                }
+                return null;
+            }
+            
+            // Funzione per formattare una data
+            function formatDate(date) {
+                return date.toLocaleDateString('it-IT', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+            }
+            
+            // Funzione per aggiornare il calendario
+            function updateCalendar() {
+                // Rimuovi tutti i giorni esistenti
+                const dayElements = document.querySelectorAll('.calendar-day');
+                dayElements.forEach(el => el.remove());
+                
+                // Ottieni il mese selezionato
+                const selectedMonth = parseInt(monthSelect.value);
+                const year = 2025;
+                
+                // Crea la data del primo giorno del mese
+                const firstDay = new Date(year, selectedMonth, 1);
+                
+                // Trova il primo giorno della settimana (0 = Domenica, 1 = Lunedì, ecc.)
+                let dayOfWeek = firstDay.getDay() || 7; // Converte 0 (domenica) a 7
+                dayOfWeek = dayOfWeek - 1; // Adatta a lunedì = 0
+                
+                // Aggiungi celle vuote per i giorni prima del primo del mese
+                for (let i = 0; i < dayOfWeek; i++) {
+                    const emptyCell = document.createElement('div');
+                    calendarElement.appendChild(emptyCell);
+                }
+                
+                // Calcola il numero di giorni nel mese
+                const lastDay = new Date(year, selectedMonth + 1, 0);
+                const daysInMonth = lastDay.getDate();
+                
+                // Aggiungi tutti i giorni del mese
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const date = new Date(year, selectedMonth, day);
+                    const dayElement = document.createElement('div');
+                    dayElement.className = 'calendar-day';
+                    dayElement.textContent = day;
+                    
+                    // Aggiungi il prezzo se disponibile
+                    const price = getDatePrice(date);
+                    if (price) {
+                        const priceElement = document.createElement('span');
+                        priceElement.className = 'price';
+                        priceElement.textContent = `${price}€`;
+                        dayElement.appendChild(priceElement);
+                    } else {
+                        dayElement.classList.add('disabled');
+                        dayElement.title = 'Data non prenotabile';
+                    }
+                    
+                    // Verifica se la data è selezionata
+                    if (isDateSelected(date)) {
+                        dayElement.classList.add('selected');
+                    }
+                    
+                    // Aggiungi l'evento click solo se la data è prenotabile
+                    if (price) {
+                        dayElement.addEventListener('click', () => toggleDateSelection(date));
+                    }
+                    
+                    calendarElement.appendChild(dayElement);
+                }
+            }
+            
+            // Funzione per verificare se una data è selezionata
+            function isDateSelected(date) {
+                return selectedDates.some(selectedDate => 
+                    selectedDate.getDate() === date.getDate() && 
+                    selectedDate.getMonth() === date.getMonth() && 
+                    selectedDate.getFullYear() === date.getFullYear()
+                );
+            }
+            
+            // Funzione per gestire la selezione/deselezione delle date
+            function toggleDateSelection(date) {
+                const dateIndex = selectedDates.findIndex(selectedDate => 
+                    selectedDate.getDate() === date.getDate() && 
+                    selectedDate.getMonth() === date.getMonth() && 
+                    selectedDate.getFullYear() === date.getFullYear()
+                );
+                
+                if (dateIndex === -1) {
+                    // Aggiungi la data
+                    selectedDates.push(date);
+                } else {
+                    // Rimuovi la data
+                    selectedDates.splice(dateIndex, 1);
+                }
+                
+                // Ordina le date
+                selectedDates.sort((a, b) => a - b);
+                
+                // Aggiorna il calendario e le informazioni
+                updateCalendar();
+                updateSelectionInfo();
+            }
+            
+            // Funzione per aggiornare le informazioni sulla selezione
+            function updateSelectionInfo() {
+                if (selectedDates.length === 0) {
+                    selectedDatesElement.textContent = 'Nessuna data selezionata';
+                    nightsCountElement.textContent = '0';
+                    calculateButton.disabled = true;
+                } else {
+                    const formattedDates = selectedDates.map(date => formatDate(date)).join(' - ');
+                    selectedDatesElement.textContent = formattedDates;
+                    
+                    // Calcola il numero di notti
+                    if (selectedDates.length >= 2) {
+                        const startDate = selectedDates[0];
+                        const endDate = selectedDates[selectedDates.length - 1];
+                        const nights = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+                        nightsCountElement.textContent = nights;
+                        
+                        // Abilita il pulsante di calcolo se ci sono almeno 4 notti
+                        calculateButton.disabled = nights < minNights;
+                    } else {
+                        nightsCountElement.textContent = '0';
+                        calculateButton.disabled = true;
+                    }
+                }
+            }
+            
+            // Funzione per calcolare il preventivo
+            function calculateQuote() {
+                if (selectedDates.length < 2) {
+                    alert('Seleziona almeno due date.');
+                    return;
+                }
+                
+                const startDate = selectedDates[0];
+                const endDate = selectedDates[selectedDates.length - 1];
+                const nights = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+                
+                if (nights < minNights) {
+                    resultElement.className = 'error';
+                    resultElement.style.display = 'block';
+                    resultElement.innerHTML = `Il soggiorno minimo è di ${minNights} notti. Hai selezionato ${nights} ${nights === 1 ? 'notte' : 'notti'}.`;
+                    return;
+                }
+                
+                // Crea un array di tutte le date del soggiorno
+                let dates = [];
+                let currentDate = new Date(startDate);
+                
+                while (currentDate <= endDate) {
+                    dates.push(new Date(currentDate));
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+                
+                // Verifica che tutte le date siano prenotabili
+                let nonBookable = dates.some(date => !isBookableDate(date));
+                
+                if (nonBookable) {
+                    resultElement.className = 'error';
+                    resultElement.style.display = 'block';
+                    resultElement.innerHTML = 'Alcune date selezionate non sono prenotabili. Riprova con un altro periodo.';
+                    return;
+                }
+                
+                // Calcola il prezzo per ogni notte
+                let nightlyPrices = dates.map(date => ({
+                    date: date,
+                    price: getDatePrice(date)
+                }));
+                
+                // Calcola il totale
+                const subtotal = nightlyPrices.reduce((sum, night) => sum + night.price, 0);
+                const total = subtotal + cleaningFee;
+                
+                // Mostra il risultato
+                let html = `
+                    <div class="success">
+                        <p>Preventivo per il soggiorno dal ${formatDate(startDate)} al ${formatDate(endDate)} (${nights} notti):</p>
+                        
+                        <div class="price-breakdown">
+                `;
+                
+                // Aggiunge il dettaglio delle notti
+                nightlyPrices.forEach((night, index) => {
+                    html += `
+                        <div class="price-item">
+                            <span>Notte ${index + 1} (${formatDate(night.date)}):</span>
+                            <span>${night.price.toFixed(2)} €</span>
+                        </div>
+                    `;
+                });
+                
+                // Aggiunge pulizie e totale
+                html += `
+                            <div class="price-item">
+                                <span>Spese di pulizia:</span>
+                                <span>${cleaningFee.toFixed(2)} €</span>
+                            </div>
+                            
+                            <div class="price-item price-total">
+                                <span>Totale:</span>
+                                <span>${total.toFixed(2)} €</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                resultElement.className = 'success';
+                resultElement.style.display = 'block';
+                resultElement.innerHTML = html;
+            }
+            
+            // Inizializza il calendario
+            updateCalendar();
+            
+            // Aggiungi event listeners
+            monthSelect.addEventListener('change', updateCalendar);
+            calculateButton.addEventListener('click', calculateQuote);
+        });
+    </script>
+</body>
+</html>
